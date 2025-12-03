@@ -27,19 +27,11 @@ st.markdown("""
     .stat-card-amber { background: #fffbeb; }
     .stat-card-gray { background: #f1f5f9; border: 1px solid #e2e8f0; }
     .stat-card-blue { background: #eff6ff; }
-    
-    .course-card {
-        background: white;
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 16px;
-        border: 1px solid #e2e8f0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================================================
-# BASE DE DONNÉES UTILISATEURS - 40+ CHEFS D'ENTREPRISE
+# BASE DE DONNÉES UTILISATEURS - 43 CHEFS D'ENTREPRISE
 # =============================================================================
 USERS = {
     # ADMINISTRATEURS
@@ -678,21 +670,21 @@ def show_app():
     tabs = st.tabs(tab_labels)
     
     with tabs[0]:
-        show_courses_list(disponibles, user)
+        show_courses_list(disponibles, user, "dispo")
     
     with tabs[1]:
-        show_courses_list(prises, user)
+        show_courses_list(prises, user, "encours")
     
     with tabs[2]:
-        show_courses_list(terminees, user)
+        show_courses_list(terminees, user, "term")
     
     with tabs[3]:
-        show_courses_list(mes_courses, user)
+        show_courses_list(mes_courses, user, "mes")
     
     if user["is_admin"]:
         with tabs[4]:
             st.markdown(f"**{len(USERS)} entreprises enregistrées** | **{len(st.session_state.courses)} courses au total**")
-            show_courses_list(st.session_state.courses, user)
+            show_courses_list(st.session_state.courses, user, "admin")
     
     # Footer
     st.markdown("---")
@@ -704,14 +696,21 @@ def show_app():
     """, unsafe_allow_html=True)
 
 # =============================================================================
-# AFFICHAGE DES COURSES
+# AFFICHAGE DES COURSES - AVEC CLÉS UNIQUES
 # =============================================================================
-def show_courses_list(courses_list, user):
+def show_courses_list(courses_list, user, tab_prefix):
+    """
+    Affiche la liste des courses avec des clés uniques pour chaque onglet.
+    tab_prefix : préfixe unique pour éviter les doublons de clés entre onglets
+    """
     if not courses_list:
         st.info("📭 Aucune course dans cette catégorie")
         return
     
     for course in courses_list:
+        # Clé unique = préfixe de l'onglet + id de la course
+        unique_key = f"{tab_prefix}_{course['id']}"
+        
         # Couleurs selon statut
         if course["statut"] == "disponible":
             border_color = "#10b981"
@@ -767,13 +766,13 @@ def show_courses_list(courses_list, user):
         </div>
         """, unsafe_allow_html=True)
         
-        # Boutons d'action
+        # Boutons d'action avec clés uniques
         col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
         
         # Prendre la course
         if course["statut"] == "disponible" and course["depose_par"] != user["email"]:
             with col1:
-                if st.button(f"✅ JE PRENDS", key=f"take_{course['id']}"):
+                if st.button("✅ JE PRENDS", key=f"take_{unique_key}"):
                     for c in st.session_state.courses:
                         if c["id"] == course["id"]:
                             c["statut"] = "prise"
@@ -786,14 +785,14 @@ def show_courses_list(courses_list, user):
         # Actions si prise par moi
         if course["statut"] == "prise" and course["prise_par"] == user["email"]:
             with col1:
-                if st.button(f"🏁 Terminer", key=f"finish_{course['id']}"):
+                if st.button("🏁 Terminer", key=f"finish_{unique_key}"):
                     for c in st.session_state.courses:
                         if c["id"] == course["id"]:
                             c["statut"] = "terminee"
                     st.success("✅ Course terminée !")
                     st.rerun()
             with col2:
-                if st.button(f"↩️ Annuler", key=f"cancel_{course['id']}"):
+                if st.button("↩️ Annuler", key=f"cancel_{unique_key}"):
                     for c in st.session_state.courses:
                         if c["id"] == course["id"]:
                             c["statut"] = "disponible"
@@ -807,7 +806,7 @@ def show_courses_list(courses_list, user):
         if user["is_admin"]:
             if course["statut"] == "prise":
                 with col3:
-                    if st.button(f"🔄 Réattribuer", key=f"reassign_{course['id']}"):
+                    if st.button("🔄 Réattribuer", key=f"reassign_{unique_key}"):
                         for c in st.session_state.courses:
                             if c["id"] == course["id"]:
                                 c["statut"] = "disponible"
@@ -817,7 +816,7 @@ def show_courses_list(courses_list, user):
                         st.success("🔄 Course réattribuée")
                         st.rerun()
             with col4:
-                if st.button(f"🗑️ Suppr.", key=f"delete_{course['id']}"):
+                if st.button("🗑️ Suppr.", key=f"delete_{unique_key}"):
                     st.session_state.courses = [c for c in st.session_state.courses if c["id"] != course["id"]]
                     st.success("🗑️ Course supprimée")
                     st.rerun()
