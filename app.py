@@ -1,5 +1,7 @@
 import streamlit as st
 from datetime import datetime, timedelta
+import gspread
+from google.oauth2.service_account import Credentials
 
 # Configuration de la page
 st.set_page_config(
@@ -8,6 +10,123 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# =============================================================================
+# CONNEXION GOOGLE SHEETS
+# =============================================================================
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+@st.cache_resource
+def get_google_sheet():
+    """Connexion au Google Sheet"""
+    credentials = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
+    )
+    client = gspread.authorize(credentials)
+    spreadsheet_id = st.secrets["google_sheets"]["spreadsheet_id"]
+    sheet = client.open_by_key(spreadsheet_id).sheet1
+    return sheet
+
+def load_courses_from_sheet():
+    """Charge toutes les courses depuis Google Sheets"""
+    try:
+        sheet = get_google_sheet()
+        records = sheet.get_all_records()
+        courses = []
+        for record in records:
+            course = {
+                "id": int(record.get("id", 0)),
+                "depart": str(record.get("depart", "")),
+                "destination": str(record.get("destination", "")),
+                "date": str(record.get("date", "")),
+                "heure": str(record.get("heure", "")),
+                "passagers": int(record.get("passagers", 1)) if record.get("passagers") else 1,
+                "prix": str(record.get("prix", "")),
+                "depose_par": str(record.get("depose_par", "")),
+                "depose_par_nom": str(record.get("depose_par_nom", "")),
+                "commentaire": str(record.get("commentaire", "")),
+                "statut": str(record.get("statut", "disponible")),
+                "prise_par": str(record.get("prise_par", "")) if record.get("prise_par") else None,
+                "prise_par_nom": str(record.get("prise_par_nom", "")) if record.get("prise_par_nom") else None,
+                "horodatage_prise": str(record.get("horodatage_prise", "")) if record.get("horodatage_prise") else None
+            }
+            if course["id"] > 0:
+                courses.append(course)
+        return courses
+    except Exception as e:
+        st.error(f"Erreur de chargement: {e}")
+        return []
+
+def save_course_to_sheet(course):
+    """Ajoute une nouvelle course dans Google Sheets"""
+    try:
+        sheet = get_google_sheet()
+        row = [
+            course["id"],
+            course["depart"],
+            course["destination"],
+            course["date"],
+            course["heure"],
+            course["passagers"],
+            course["prix"],
+            course["depose_par"],
+            course["depose_par_nom"],
+            course["commentaire"],
+            course["statut"],
+            course["prise_par"] or "",
+            course["prise_par_nom"] or "",
+            course["horodatage_prise"] or ""
+        ]
+        sheet.append_row(row)
+        return True
+    except Exception as e:
+        st.error(f"Erreur de sauvegarde: {e}")
+        return False
+
+def update_course_in_sheet(course_id, updates):
+    """Met à jour une course dans Google Sheets"""
+    try:
+        sheet = get_google_sheet()
+        # Trouver la ligne avec cet ID
+        cell = sheet.find(str(course_id), in_column=1)
+        if cell:
+            row_number = cell.row
+            # Mettre à jour les colonnes nécessaires
+            if "statut" in updates:
+                sheet.update_cell(row_number, 11, updates["statut"])
+            if "prise_par" in updates:
+                sheet.update_cell(row_number, 12, updates["prise_par"] or "")
+            if "prise_par_nom" in updates:
+                sheet.update_cell(row_number, 13, updates["prise_par_nom"] or "")
+            if "horodatage_prise" in updates:
+                sheet.update_cell(row_number, 14, updates["horodatage_prise"] or "")
+            return True
+    except Exception as e:
+        st.error(f"Erreur de mise à jour: {e}")
+    return False
+
+def delete_course_from_sheet(course_id):
+    """Supprime une course de Google Sheets"""
+    try:
+        sheet = get_google_sheet()
+        cell = sheet.find(str(course_id), in_column=1)
+        if cell:
+            sheet.delete_rows(cell.row)
+            return True
+    except Exception as e:
+        st.error(f"Erreur de suppression: {e}")
+    return False
+
+def get_next_id():
+    """Obtient le prochain ID disponible"""
+    courses = load_courses_from_sheet()
+    if not courses:
+        return 1
+    return max(c["id"] for c in courses) + 1
 
 # =============================================================================
 # BASE DE DONNÉES UTILISATEURS - 43 CHEFS D'ENTREPRISE
@@ -337,98 +456,9 @@ if "logged_in" not in st.session_state:
     st.session_state.current_user = None
     st.session_state.show_new_course = False
 
-if "courses" not in st.session_state:
-    st.session_state.courses = [
-        {
-            "id": 1,
-            "depart": "Chartres Centre",
-            "destination": "Aéroport Paris-Orly",
-            "date": "2025-12-03",
-            "heure": "06:30",
-            "passagers": 2,
-            "prix": "120€",
-            "depose_par": "taxidange28@gmail.com",
-            "depose_par_nom": "Transport DanGE",
-            "commentaire": "Client régulier - Vol Air France 7h45",
-            "statut": "disponible",
-            "prise_par": None,
-            "prise_par_nom": None,
-            "horodatage_prise": None
-        },
-        {
-            "id": 2,
-            "depart": "Dreux Gare SNCF",
-            "destination": "Chartres CHR",
-            "date": "2025-12-03",
-            "heure": "14:00",
-            "passagers": 1,
-            "prix": "45€",
-            "depose_par": "taxi.dreux01@assoplan.fr",
-            "depose_par_nom": "Dupont Taxi Dreux",
-            "commentaire": "Patient - PMR",
-            "statut": "disponible",
-            "prise_par": None,
-            "prise_par_nom": None,
-            "horodatage_prise": None
-        },
-        {
-            "id": 3,
-            "depart": "Illiers-Combray",
-            "destination": "Paris Gare Montparnasse",
-            "date": "2025-12-04",
-            "heure": "05:00",
-            "passagers": 3,
-            "prix": "150€",
-            "depose_par": "taxidange28@gmail.com",
-            "depose_par_nom": "Transport DanGE",
-            "commentaire": "TGV 6h15 - Bagages volumineux",
-            "statut": "prise",
-            "prise_par": "taxi.chartres01@assoplan.fr",
-            "prise_par_nom": "Taxi Martin Chartres",
-            "horodatage_prise": "2025-12-02 10:23:45"
-        },
-        {
-            "id": 4,
-            "depart": "Nogent-le-Rotrou",
-            "destination": "Chartres Clinique",
-            "date": "2025-12-05",
-            "heure": "08:00",
-            "passagers": 1,
-            "prix": "65€",
-            "depose_par": "taxi.nogent01@assoplan.fr",
-            "depose_par_nom": "Blanc Taxi Nogent",
-            "commentaire": "RDV médical - retour prévu 11h",
-            "statut": "disponible",
-            "prise_par": None,
-            "prise_par_nom": None,
-            "horodatage_prise": None
-        },
-        {
-            "id": 5,
-            "depart": "Châteaudun Centre",
-            "destination": "Paris CDG Terminal 2",
-            "date": "2025-12-06",
-            "heure": "04:30",
-            "passagers": 4,
-            "prix": "180€",
-            "depose_par": "taxi.chateaudun01@assoplan.fr",
-            "depose_par_nom": "Schmitt Taxi Châteaudun",
-            "commentaire": "Vol 7h00 - 4 grosses valises",
-            "statut": "disponible",
-            "prise_par": None,
-            "prise_par_nom": None,
-            "horodatage_prise": None
-        }
-    ]
-
 # =============================================================================
 # FONCTIONS UTILITAIRES
 # =============================================================================
-def get_next_id():
-    if not st.session_state.courses:
-        return 1
-    return max(c["id"] for c in st.session_state.courses) + 1
-
 def format_date(date_str):
     try:
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
@@ -436,11 +466,11 @@ def format_date(date_str):
     except:
         return date_str
 
-def get_courses_by_status(statut):
-    return [c for c in st.session_state.courses if c["statut"] == statut]
+def get_courses_by_status(courses, statut):
+    return [c for c in courses if c["statut"] == statut]
 
-def get_my_courses(email):
-    return [c for c in st.session_state.courses if c["depose_par"] == email or c["prise_par"] == email]
+def get_my_courses(courses, email):
+    return [c for c in courses if c["depose_par"] == email or c["prise_par"] == email]
 
 # =============================================================================
 # PAGE DE CONNEXION
@@ -516,11 +546,14 @@ def show_app():
     
     st.markdown("---")
     
+    # Charger les courses depuis Google Sheets
+    courses = load_courses_from_sheet()
+    
     # Statistiques
-    disponibles = get_courses_by_status("disponible")
-    prises = get_courses_by_status("prise")
-    terminees = get_courses_by_status("terminee")
-    mes_courses = get_my_courses(user["email"])
+    disponibles = get_courses_by_status(courses, "disponible")
+    prises = get_courses_by_status(courses, "prise")
+    terminees = get_courses_by_status(courses, "terminee")
+    mes_courses = get_my_courses(courses, user["email"])
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -538,8 +571,12 @@ def show_app():
     
     st.markdown("---")
     
-    # Bouton nouvelle course
-    col1, col2 = st.columns([3, 1])
+    # Boutons d'action
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        if st.button("🔄 Rafraîchir les données", use_container_width=True):
+            st.cache_resource.clear()
+            st.rerun()
     with col2:
         if st.button("➕ Déposer une course", type="primary", use_container_width=True):
             st.session_state.show_new_course = True
@@ -596,10 +633,11 @@ def show_app():
                             "prise_par_nom": None,
                             "horodatage_prise": None
                         }
-                        st.session_state.courses.insert(0, new_course)
-                        st.session_state.show_new_course = False
-                        st.success("✅ Course déposée avec succès !")
-                        st.rerun()
+                        if save_course_to_sheet(new_course):
+                            st.session_state.show_new_course = False
+                            st.success("✅ Course déposée avec succès !")
+                            st.cache_resource.clear()
+                            st.rerun()
                     else:
                         st.error("⚠️ Veuillez remplir le départ et la destination")
     
@@ -624,15 +662,15 @@ def show_app():
     
     if user["is_admin"]:
         with tabs[4]:
-            st.info(f"**{len(USERS)} entreprises enregistrées** | **{len(st.session_state.courses)} courses au total**")
-            show_courses_list(st.session_state.courses, user, "admin")
+            st.info(f"**{len(USERS)} entreprises enregistrées** | **{len(courses)} courses au total**")
+            show_courses_list(courses, user, "admin")
     
     # Footer
     st.markdown("---")
     st.caption(f"ASSO-PLAN © 2025 — Planning partagé pour services de taxi | Développé pour Transport DanGE / agitaxi.fr | {len(USERS)} entreprises dans le réseau")
 
 # =============================================================================
-# AFFICHAGE DES COURSES - COMPOSANTS NATIFS STREAMLIT
+# AFFICHAGE DES COURSES
 # =============================================================================
 def show_courses_list(courses_list, user, tab_prefix):
     if not courses_list:
@@ -685,53 +723,60 @@ def show_courses_list(courses_list, user, tab_prefix):
             if course["statut"] == "disponible" and course["depose_par"] != user["email"]:
                 with col1:
                     if st.button("✅ JE PRENDS", key=f"take_{unique_key}", type="primary"):
-                        for c in st.session_state.courses:
-                            if c["id"] == course["id"]:
-                                c["statut"] = "prise"
-                                c["prise_par"] = user["email"]
-                                c["prise_par_nom"] = user["company"]
-                                c["horodatage_prise"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        st.success("✅ Course prise !")
-                        st.rerun()
+                        updates = {
+                            "statut": "prise",
+                            "prise_par": user["email"],
+                            "prise_par_nom": user["company"],
+                            "horodatage_prise": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        if update_course_in_sheet(course["id"], updates):
+                            st.success("✅ Course prise !")
+                            st.cache_resource.clear()
+                            st.rerun()
             
             # Actions si prise par moi
             if course["statut"] == "prise" and course["prise_par"] == user["email"]:
                 with col1:
                     if st.button("🏁 Terminer", key=f"finish_{unique_key}"):
-                        for c in st.session_state.courses:
-                            if c["id"] == course["id"]:
-                                c["statut"] = "terminee"
-                        st.success("✅ Course terminée !")
-                        st.rerun()
+                        updates = {"statut": "terminee"}
+                        if update_course_in_sheet(course["id"], updates):
+                            st.success("✅ Course terminée !")
+                            st.cache_resource.clear()
+                            st.rerun()
                 with col2:
                     if st.button("↩️ Annuler ma prise", key=f"cancel_{unique_key}"):
-                        for c in st.session_state.courses:
-                            if c["id"] == course["id"]:
-                                c["statut"] = "disponible"
-                                c["prise_par"] = None
-                                c["prise_par_nom"] = None
-                                c["horodatage_prise"] = None
-                        st.success("↩️ Course remise en disponibilité")
-                        st.rerun()
+                        updates = {
+                            "statut": "disponible",
+                            "prise_par": "",
+                            "prise_par_nom": "",
+                            "horodatage_prise": ""
+                        }
+                        if update_course_in_sheet(course["id"], updates):
+                            st.success("↩️ Course remise en disponibilité")
+                            st.cache_resource.clear()
+                            st.rerun()
             
             # Actions Admin
             if user["is_admin"]:
                 if course["statut"] == "prise":
                     with col3:
                         if st.button("🔄 Réattribuer", key=f"reassign_{unique_key}"):
-                            for c in st.session_state.courses:
-                                if c["id"] == course["id"]:
-                                    c["statut"] = "disponible"
-                                    c["prise_par"] = None
-                                    c["prise_par_nom"] = None
-                                    c["horodatage_prise"] = None
-                            st.success("🔄 Course réattribuée")
-                            st.rerun()
+                            updates = {
+                                "statut": "disponible",
+                                "prise_par": "",
+                                "prise_par_nom": "",
+                                "horodatage_prise": ""
+                            }
+                            if update_course_in_sheet(course["id"], updates):
+                                st.success("🔄 Course réattribuée")
+                                st.cache_resource.clear()
+                                st.rerun()
                 with col4:
                     if st.button("🗑️ Supprimer", key=f"delete_{unique_key}"):
-                        st.session_state.courses = [c for c in st.session_state.courses if c["id"] != course["id"]]
-                        st.success("🗑️ Course supprimée")
-                        st.rerun()
+                        if delete_course_from_sheet(course["id"]):
+                            st.success("🗑️ Course supprimée")
+                            st.cache_resource.clear()
+                            st.rerun()
             
             st.markdown("---")
 
