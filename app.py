@@ -9,27 +9,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS personnalisé
-st.markdown("""
-<style>
-    .stApp { background-color: #f1f5f9; }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    .stat-card {
-        padding: 20px;
-        border-radius: 16px;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .stat-card-green { background: #ecfdf5; }
-    .stat-card-amber { background: #fffbeb; }
-    .stat-card-gray { background: #f1f5f9; border: 1px solid #e2e8f0; }
-    .stat-card-blue { background: #eff6ff; }
-</style>
-""", unsafe_allow_html=True)
-
 # =============================================================================
 # BASE DE DONNÉES UTILISATEURS - 43 CHEFS D'ENTREPRISE
 # =============================================================================
@@ -467,13 +446,10 @@ def get_my_courses(email):
 # PAGE DE CONNEXION
 # =============================================================================
 def show_login():
-    st.markdown("""
-    <div style="text-align: center; padding: 30px 0;">
-        <div style="font-size: 4rem;">🚖</div>
-        <h1 style="font-size: 2.5rem; font-weight: 700; color: #1e293b; margin: 10px 0;">ASSO-PLAN</h1>
-        <p style="color: #64748b; font-size: 1rem;">Planning partagé pour services de taxi - Eure-et-Loir</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("🚖 ASSO-PLAN")
+    st.subheader("Planning partagé pour services de taxi - Eure-et-Loir")
+    
+    st.markdown("---")
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
@@ -516,11 +492,7 @@ def show_login():
             - etc.
             """)
         
-        st.markdown(f"""
-        <div style="text-align: center; margin-top: 20px; color: #94a3b8; font-size: 0.8rem;">
-            {len(USERS)} entreprises enregistrées dans le réseau
-        </div>
-        """, unsafe_allow_html=True)
+        st.info(f"📊 {len(USERS)} entreprises enregistrées dans le réseau")
 
 # =============================================================================
 # APPLICATION PRINCIPALE
@@ -531,23 +503,12 @@ def show_app():
     # Header
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown(f"""
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <div style="font-size: 2.5rem;">🚖</div>
-            <div>
-                <h1 style="margin: 0; font-size: 1.8rem; font-weight: 700; color: #1e293b;">ASSO-PLAN</h1>
-                <p style="margin: 0; color: #64748b;">{user['company']} - {user.get('zone', '')}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.title("🚖 ASSO-PLAN")
+        st.caption(f"{user['company']} - {user.get('zone', '')}")
     
     with col2:
-        st.markdown(f"""
-        <div style="text-align: right;">
-            <p style="margin: 0; font-weight: 600; color: #1e293b;">{user['name']}</p>
-            <p style="margin: 0; color: #64748b; font-size: 0.85rem;">{'👑 Administrateur' if user['is_admin'] else '🚖 Chauffeur'}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"**{user['name']}**")
+        st.caption("👑 Administrateur" if user["is_admin"] else "🚖 Chauffeur")
         if st.button("🚪 Déconnexion", key="logout_btn"):
             st.session_state.logged_in = False
             st.session_state.current_user = None
@@ -564,38 +525,18 @@ def show_app():
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown(f"""
-        <div class="stat-card stat-card-green">
-            <p style="font-size: 2.5rem; font-weight: 700; color: #059669; margin: 0;">{len(disponibles)}</p>
-            <p style="color: #64748b; margin: 5px 0 0 0;">Disponibles</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(label="🟢 Disponibles", value=len(disponibles))
     
     with col2:
-        st.markdown(f"""
-        <div class="stat-card stat-card-amber">
-            <p style="font-size: 2.5rem; font-weight: 700; color: #d97706; margin: 0;">{len(prises)}</p>
-            <p style="color: #64748b; margin: 5px 0 0 0;">En cours</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(label="🟡 En cours", value=len(prises))
     
     with col3:
-        st.markdown(f"""
-        <div class="stat-card stat-card-gray">
-            <p style="font-size: 2.5rem; font-weight: 700; color: #475569; margin: 0;">{len(terminees)}</p>
-            <p style="color: #64748b; margin: 5px 0 0 0;">Terminées</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(label="✅ Terminées", value=len(terminees))
     
     with col4:
-        st.markdown(f"""
-        <div class="stat-card stat-card-blue">
-            <p style="font-size: 2.5rem; font-weight: 700; color: #2563eb; margin: 0;">{len(mes_courses)}</p>
-            <p style="color: #64748b; margin: 5px 0 0 0;">Mes courses</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(label="📋 Mes courses", value=len(mes_courses))
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("---")
     
     # Bouton nouvelle course
     col1, col2 = st.columns([3, 1])
@@ -683,150 +624,116 @@ def show_app():
     
     if user["is_admin"]:
         with tabs[4]:
-            st.markdown(f"**{len(USERS)} entreprises enregistrées** | **{len(st.session_state.courses)} courses au total**")
+            st.info(f"**{len(USERS)} entreprises enregistrées** | **{len(st.session_state.courses)} courses au total**")
             show_courses_list(st.session_state.courses, user, "admin")
     
     # Footer
     st.markdown("---")
-    st.markdown(f"""
-    <div style="text-align: center; color: #64748b; padding: 20px;">
-        <p>ASSO-PLAN © 2025 — Planning partagé pour services de taxi</p>
-        <p style="font-size: 0.8rem;">Développé pour Transport DanGE / agitaxi.fr | {len(USERS)} entreprises dans le réseau</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.caption(f"ASSO-PLAN © 2025 — Planning partagé pour services de taxi | Développé pour Transport DanGE / agitaxi.fr | {len(USERS)} entreprises dans le réseau")
 
 # =============================================================================
-# AFFICHAGE DES COURSES - AVEC CLÉS UNIQUES
+# AFFICHAGE DES COURSES - COMPOSANTS NATIFS STREAMLIT
 # =============================================================================
 def show_courses_list(courses_list, user, tab_prefix):
-    """
-    Affiche la liste des courses avec des clés uniques pour chaque onglet.
-    tab_prefix : préfixe unique pour éviter les doublons de clés entre onglets
-    """
     if not courses_list:
         st.info("📭 Aucune course dans cette catégorie")
         return
     
     for course in courses_list:
-        # Clé unique = préfixe de l'onglet + id de la course
         unique_key = f"{tab_prefix}_{course['id']}"
         
-        # Couleurs selon statut
-        if course["statut"] == "disponible":
-            border_color = "#10b981"
-            status_bg = "#ecfdf5"
-            status_color = "#059669"
-            status_text = "🟢 Disponible"
-        elif course["statut"] == "prise":
-            border_color = "#f59e0b"
-            status_bg = "#fffbeb"
-            status_color = "#d97706"
-            status_text = "🟡 Prise"
-        else:
-            border_color = "#94a3b8"
-            status_bg = "#f1f5f9"
-            status_color = "#64748b"
-            status_text = "✅ Terminée"
-        
-        # Affichage de la carte
-        st.markdown(f"""
-        <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; 
-                    border: 1px solid #e2e8f0; border-left: 4px solid {border_color};">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                <div>
-                    <span style="background: {status_bg}; color: {status_color}; padding: 5px 12px; 
-                                 border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
-                        {status_text}
-                    </span>
-                    <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 8px;">Déposée par {course['depose_par_nom']}</p>
-                </div>
-                <div style="text-align: right;">
-                    <p style="font-size: 1.4rem; font-weight: 700; color: #1e293b; margin: 0;">{course['prix'] or '—'}</p>
-                    <p style="color: #64748b; font-size: 0.85rem; margin: 0;">{course['passagers']} passager(s)</p>
-                </div>
-            </div>
+        # Container pour chaque course
+        with st.container():
+            # Statut
+            if course["statut"] == "disponible":
+                st.success(f"🟢 **DISPONIBLE** — Déposée par {course['depose_par_nom']}")
+            elif course["statut"] == "prise":
+                st.warning(f"🟡 **EN COURS** — Déposée par {course['depose_par_nom']}")
+            else:
+                st.info(f"✅ **TERMINÉE** — Déposée par {course['depose_par_nom']}")
             
-            <div style="margin: 15px 0;">
-                <p style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin: 5px 0;">
-                    🟢 {course['depart']}
-                </p>
-                <p style="color: #94a3b8; margin: 0 0 0 10px;">↓</p>
-                <p style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin: 5px 0;">
-                    🔴 {course['destination']}
-                </p>
-            </div>
+            # Trajet et détails
+            col1, col2, col3 = st.columns([2, 1, 1])
             
-            <p style="color: #64748b; font-size: 0.9rem;">
-                📅 {format_date(course['date'])} &nbsp;&nbsp; 🕐 <strong style="color: #2563eb;">{course['heure']}</strong>
-            </p>
-            
-            {"<p style='background: #f8fafc; padding: 10px; border-radius: 8px; color: #475569; font-size: 0.85rem; margin-top: 10px;'>💬 " + course['commentaire'] + "</p>" if course['commentaire'] else ""}
-            
-            {"<p style='background: #fffbeb; padding: 10px; border-radius: 8px; color: #92400e; font-size: 0.85rem; margin-top: 10px;'><strong>Prise par:</strong> " + str(course['prise_par_nom'] or '') + "<br><small>⏱️ " + str(course['horodatage_prise'] or '') + "</small></p>" if course['statut'] != 'disponible' and course['prise_par_nom'] else ""}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Boutons d'action avec clés uniques
-        col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
-        
-        # Prendre la course
-        if course["statut"] == "disponible" and course["depose_par"] != user["email"]:
             with col1:
-                if st.button("✅ JE PRENDS", key=f"take_{unique_key}"):
-                    for c in st.session_state.courses:
-                        if c["id"] == course["id"]:
-                            c["statut"] = "prise"
-                            c["prise_par"] = user["email"]
-                            c["prise_par_nom"] = user["company"]
-                            c["horodatage_prise"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    st.success("✅ Course prise !")
-                    st.rerun()
-        
-        # Actions si prise par moi
-        if course["statut"] == "prise" and course["prise_par"] == user["email"]:
-            with col1:
-                if st.button("🏁 Terminer", key=f"finish_{unique_key}"):
-                    for c in st.session_state.courses:
-                        if c["id"] == course["id"]:
-                            c["statut"] = "terminee"
-                    st.success("✅ Course terminée !")
-                    st.rerun()
+                st.markdown(f"### 🟢 {course['depart']}")
+                st.markdown("⬇️")
+                st.markdown(f"### 🔴 {course['destination']}")
+            
             with col2:
-                if st.button("↩️ Annuler", key=f"cancel_{unique_key}"):
-                    for c in st.session_state.courses:
-                        if c["id"] == course["id"]:
-                            c["statut"] = "disponible"
-                            c["prise_par"] = None
-                            c["prise_par_nom"] = None
-                            c["horodatage_prise"] = None
-                    st.success("↩️ Course remise en disponibilité")
-                    st.rerun()
-        
-        # Actions Admin
-        if user["is_admin"]:
-            if course["statut"] == "prise":
-                with col3:
-                    if st.button("🔄 Réattribuer", key=f"reassign_{unique_key}"):
+                st.markdown(f"**📅 Date:** {format_date(course['date'])}")
+                st.markdown(f"**🕐 Heure:** {course['heure']}")
+                st.markdown(f"**👥 Passagers:** {course['passagers']}")
+            
+            with col3:
+                st.markdown(f"### 💰 {course['prix'] or '—'}")
+                if course["depose_par"] == user["email"]:
+                    st.caption("📌 Ma course déposée")
+            
+            # Commentaire
+            if course["commentaire"]:
+                st.caption(f"💬 {course['commentaire']}")
+            
+            # Info prise
+            if course["statut"] != "disponible" and course["prise_par_nom"]:
+                st.warning(f"**Prise par:** {course['prise_par_nom']} — ⏱️ {course['horodatage_prise']}")
+            
+            # Boutons d'action
+            col1, col2, col3, col4 = st.columns(4)
+            
+            # Prendre la course
+            if course["statut"] == "disponible" and course["depose_par"] != user["email"]:
+                with col1:
+                    if st.button("✅ JE PRENDS", key=f"take_{unique_key}", type="primary"):
+                        for c in st.session_state.courses:
+                            if c["id"] == course["id"]:
+                                c["statut"] = "prise"
+                                c["prise_par"] = user["email"]
+                                c["prise_par_nom"] = user["company"]
+                                c["horodatage_prise"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        st.success("✅ Course prise !")
+                        st.rerun()
+            
+            # Actions si prise par moi
+            if course["statut"] == "prise" and course["prise_par"] == user["email"]:
+                with col1:
+                    if st.button("🏁 Terminer", key=f"finish_{unique_key}"):
+                        for c in st.session_state.courses:
+                            if c["id"] == course["id"]:
+                                c["statut"] = "terminee"
+                        st.success("✅ Course terminée !")
+                        st.rerun()
+                with col2:
+                    if st.button("↩️ Annuler ma prise", key=f"cancel_{unique_key}"):
                         for c in st.session_state.courses:
                             if c["id"] == course["id"]:
                                 c["statut"] = "disponible"
                                 c["prise_par"] = None
                                 c["prise_par_nom"] = None
                                 c["horodatage_prise"] = None
-                        st.success("🔄 Course réattribuée")
+                        st.success("↩️ Course remise en disponibilité")
                         st.rerun()
-            with col4:
-                if st.button("🗑️ Suppr.", key=f"delete_{unique_key}"):
-                    st.session_state.courses = [c for c in st.session_state.courses if c["id"] != course["id"]]
-                    st.success("🗑️ Course supprimée")
-                    st.rerun()
-        
-        # Badge propriétaire
-        if course["depose_par"] == user["email"]:
-            with col5:
-                st.markdown("📌 **Ma course**")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Actions Admin
+            if user["is_admin"]:
+                if course["statut"] == "prise":
+                    with col3:
+                        if st.button("🔄 Réattribuer", key=f"reassign_{unique_key}"):
+                            for c in st.session_state.courses:
+                                if c["id"] == course["id"]:
+                                    c["statut"] = "disponible"
+                                    c["prise_par"] = None
+                                    c["prise_par_nom"] = None
+                                    c["horodatage_prise"] = None
+                            st.success("🔄 Course réattribuée")
+                            st.rerun()
+                with col4:
+                    if st.button("🗑️ Supprimer", key=f"delete_{unique_key}"):
+                        st.session_state.courses = [c for c in st.session_state.courses if c["id"] != course["id"]]
+                        st.success("🗑️ Course supprimée")
+                        st.rerun()
+            
+            st.markdown("---")
 
 # =============================================================================
 # POINT D'ENTRÉE
